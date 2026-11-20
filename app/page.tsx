@@ -1,44 +1,77 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Box } from "@mui/material";
 
 import Navbar from "../components/navbar";
 import StatCard from "../components/statcard";
 import StudentTable from "../components/studenttable";
-import { students } from "../student/data";
+import { students, Student } from "../student/data";
+
+const STORAGE_KEY = "studentapp-data";
 
 export default function DashboardPage() {
-  const [search, setSearch] = useState("");
+  const [studentList, setStudentList] = useState<Student[]>(students);
 
-  const totalSiswa = students.length;
+  // Ambil data terbaru dari localStorage
+  useEffect(() => {
+    const loadStudents = () => {
+      const savedData = localStorage.getItem(STORAGE_KEY);
 
-  const lakiLaki = students.filter(
+      if (savedData) {
+        try {
+          const parsedData: Student[] = JSON.parse(savedData);
+
+          if (Array.isArray(parsedData)) {
+            setStudentList(parsedData);
+          }
+        } catch {
+          setStudentList(students);
+        }
+      } else {
+        setStudentList(students);
+      }
+    };
+
+    loadStudents();
+
+    // Mendengarkan perubahan data dari halaman Data Siswa
+    window.addEventListener(
+      "studentapp-data-updated",
+      loadStudents
+    );
+
+    window.addEventListener("storage", loadStudents);
+
+    return () => {
+      window.removeEventListener(
+        "studentapp-data-updated",
+        loadStudents
+      );
+
+      window.removeEventListener("storage", loadStudents);
+    };
+  }, []);
+
+  // STATISTIK OTOMATIS
+  const totalSiswa = studentList.length;
+
+  const lakiLaki = studentList.filter(
     (student) => student.jenisKelamin === "Laki-laki"
   ).length;
 
-  const perempuan = students.filter(
+  const perempuan = studentList.filter(
     (student) => student.jenisKelamin === "Perempuan"
   ).length;
 
   const totalKelas = new Set(
-    students.map((student) => student.kelas)
+    studentList.map((student) => student.kelas)
   ).size;
-
-  const filteredStudents = students.filter((student) =>
-    `${student.nama} ${student.nis} ${student.kelas}`
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
 
   return (
     <Box className="main-content">
-      <Navbar
-        title="Dashboard"
-        searchValue={search}
-        onSearchChange={setSearch}
-      />
+      <Navbar title="Dashboard" />
 
       <Box className="page-content">
         <Box sx={{ mb: 3 }}>
@@ -46,7 +79,7 @@ export default function DashboardPage() {
             style={{
               fontSize: "24px",
               fontWeight: 700,
-              color: "#1e293b",
+              color: "#1E293B",
               margin: 0,
             }}
           >
@@ -55,7 +88,7 @@ export default function DashboardPage() {
 
           <p
             style={{
-              color: "#64748b",
+              color: "#64748B",
               marginTop: "8px",
               fontSize: "14px",
             }}
@@ -90,7 +123,7 @@ export default function DashboardPage() {
           />
         </Box>
 
-        <StudentTable data={filteredStudents} />
+        <StudentTable data={studentList} />
       </Box>
     </Box>
   );
